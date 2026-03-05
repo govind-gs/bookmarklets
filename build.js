@@ -47,20 +47,17 @@ rl.question('\nEnter number: ', (answer) => {
   source = source.replace('{{JIRA_DOMAIN}}', jiraDomain);
 
   const minified = source
-    .replace(/\/\/[^\n]*/g, '')
     .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/^\s*\/\/[^\n]*/gm, '')
     .replace(/\s+/g, ' ')
     .trim();
 
   const bookmarklet = `javascript:(function(){${minified}})()`;
 
-  console.log('\nBookmarklet:\n');
-  console.log(bookmarklet);
-
   const { spawnSync } = require('child_process');
   const pbcopy = spawnSync('pbcopy', [], { input: bookmarklet });
   if (pbcopy.status === 0) {
-    console.log('\n✓ Copied to clipboard');
+    console.log(`\n✓ "${selected}" bookmarklet copied to clipboard`);
   } else {
     console.error('\n✗ Failed to copy to clipboard');
   }
