@@ -18,11 +18,23 @@ if (!jiraDomain) {
   process.exit(1);
 }
 
-// Discover bookmarklets: folders containing an index.js
-const bookmarklets = fs.readdirSync(__dirname, { withFileTypes: true })
+// Discover bookmarklets: project folders containing versioned subfolders (v1, v2, etc.) with index.js
+const bookmarklets = [];
+fs.readdirSync(__dirname, { withFileTypes: true })
   .filter(d => d.isDirectory() && !d.name.startsWith('.') && d.name !== 'node_modules')
-  .filter(d => fs.existsSync(path.join(__dirname, d.name, 'index.js')))
-  .map(d => d.name);
+  .forEach(d => {
+    const project = d.name;
+    const projectPath = path.join(__dirname, project);
+    const versions = fs.readdirSync(projectPath, { withFileTypes: true })
+      .filter(v => v.isDirectory() && /^v\d+$/.test(v.name))
+      .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+    versions.forEach(v => {
+      const indexFile = path.join(projectPath, v.name, 'index.js');
+      if (fs.existsSync(indexFile)) {
+        bookmarklets.push({ label: project + ' (' + v.name + ')', file: indexFile });
+      }
+    });
+  });
 
 if (bookmarklets.length === 0) {
   console.error('No bookmarklets found (folders with index.js)');
@@ -30,7 +42,7 @@ if (bookmarklets.length === 0) {
 }
 
 console.log('\nSelect a bookmarklet to build:\n');
-bookmarklets.forEach((name, i) => console.log(`  ${i + 1}. ${name}`));
+bookmarklets.forEach((b, i) => console.log(`  ${i + 1}. ${b.label}`));
 
 const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
 rl.question('\nEnter number: ', (answer) => {
@@ -42,7 +54,7 @@ rl.question('\nEnter number: ', (answer) => {
   }
 
   const selected = bookmarklets[index];
-  const inputFile = path.join(__dirname, selected, 'index.js');
+  const inputFile = selected.file;
   let source = fs.readFileSync(inputFile, 'utf8');
   source = source.replace('{{JIRA_DOMAIN}}', jiraDomain);
 
@@ -57,7 +69,7 @@ rl.question('\nEnter number: ', (answer) => {
   const { spawnSync } = require('child_process');
   const pbcopy = spawnSync('pbcopy', [], { input: bookmarklet });
   if (pbcopy.status === 0) {
-    console.log(`\n✓ "${selected}" bookmarklet copied to clipboard`);
+    console.log(`\n✓ "${selected.label}" bookmarklet copied to clipboard`);
   } else {
     console.error('\n✗ Failed to copy to clipboard');
   }
