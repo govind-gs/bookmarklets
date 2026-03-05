@@ -1,88 +1,87 @@
-const fs = require('fs');
-const path = require('path');
-const readline = require('readline');
+var fs = require('fs');
+var path = require('path');
+var readline = require('readline');
 
 // Load .env from project root
-const envPath = path.resolve(__dirname, '.env');
-const env = fs.readFileSync(envPath, 'utf8')
+var envPath = path.resolve(__dirname, '.env');
+var env = fs.readFileSync(envPath, 'utf8')
   .split('\n')
-  .reduce((acc, line) => {
-    const [key, val] = line.split('=');
-    if (key && val) acc[key.trim()] = val.trim();
+  .reduce(function(acc, line) {
+    var parts = line.split('=');
+    if (parts[0] && parts[1]) acc[parts[0].trim()] = parts[1].trim();
     return acc;
   }, {});
 
-const jiraDomain = env.JIRA_DOMAIN;
-if (!jiraDomain) {
-  console.error('Missing JIRA_DOMAIN in .env');
-  process.exit(1);
-}
-
-// Discover bookmarklets: project folders containing versioned subfolders (v1, v2, etc.) with index.js
-const bookmarklets = [];
+// Discover bookmarklets
+var bookmarklets = [];
 fs.readdirSync(__dirname, { withFileTypes: true })
-  .filter(d => d.isDirectory() && !d.name.startsWith('.') && d.name !== 'node_modules')
-  .forEach(d => {
-    const project = d.name;
-    const projectPath = path.join(__dirname, project);
-    const versions = fs.readdirSync(projectPath, { withFileTypes: true })
-      .filter(v => v.isDirectory() && /^v\d+$/.test(v.name))
-      .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
-    versions.forEach(v => {
-      const indexFile = path.join(projectPath, v.name, 'index.js');
+  .filter(function(d) { return d.isDirectory() && !d.name.startsWith('.') && d.name !== 'node_modules'; })
+  .forEach(function(d) {
+    var project = d.name;
+    var projectPath = path.join(__dirname, project);
+    var versions = fs.readdirSync(projectPath, { withFileTypes: true })
+      .filter(function(v) { return v.isDirectory() && /^v\d+$/.test(v.name); })
+      .sort(function(a, b) { return a.name.localeCompare(b.name, undefined, { numeric: true }); });
+    versions.forEach(function(v) {
+      var indexFile = path.join(projectPath, v.name, 'index.js');
       if (fs.existsSync(indexFile)) {
-        bookmarklets.push({ label: project + ' (' + v.name + ')', file: indexFile });
+        bookmarklets.push({ label: project + ' (' + v.name + ')', file: indexFile, project: projectPath });
       }
     });
   });
 
 if (bookmarklets.length === 0) {
-  console.error('No bookmarklets found (folders with index.js)');
+  console.error('No bookmarklets found');
   process.exit(1);
 }
 
 console.log('\nSelect a bookmarklet to build:\n');
-bookmarklets.forEach((b, i) => console.log(`  ${i + 1}. ${b.label}`));
+bookmarklets.forEach(function(b, i) { console.log('  ' + (i + 1) + '. ' + b.label); });
 
-const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-rl.question('\nEnter number: ', (answer) => {
+var rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+rl.question('\nEnter number: ', function(answer) {
   rl.close();
-  const index = parseInt(answer, 10) - 1;
+  var index = parseInt(answer, 10) - 1;
   if (isNaN(index) || index < 0 || index >= bookmarklets.length) {
     console.error('Invalid selection');
     process.exit(1);
   }
 
-  const selected = bookmarklets[index];
-  const inputFile = selected.file;
-  const projectDir = path.dirname(path.dirname(inputFile));
+  var selected = bookmarklets[index];
 
-  // Load shared files if they exist
-  let shared = '';
-  const sharedDir = path.join(projectDir, 'shared');
+  // Load shared files
+  var shared = '';
+  var sharedDir = path.join(selected.project, 'shared');
   if (fs.existsSync(sharedDir)) {
     fs.readdirSync(sharedDir)
-      .filter(f => f.endsWith('.js'))
+      .filter(function(f) { return f.endsWith('.js'); })
       .sort()
-      .forEach(f => { shared += fs.readFileSync(path.join(sharedDir, f), 'utf8') + '\n'; });
+      .forEach(function(f) { shared += fs.readFileSync(path.join(sharedDir, f), 'utf8') + '\n'; });
   }
 
-  let source = shared + fs.readFileSync(inputFile, 'utf8');
-  source = source.replace(/\{\{JIRA_DOMAIN\}\}/g, jiraDomain);
+  var source = shared + fs.readFileSync(selected.file, 'utf8');
 
-  const minified = source
+  // Check for project-level build.js
+  var projectBuild = path.join(selected.project, 'build.js');
+  if (fs.existsSync(projectBuild)) {
+    var transform = require(projectBuild);
+    source = transform(source, env);
+  }
+
+  // Minify
+  var minified = source
     .replace(/\/\*[\s\S]*?\*\//g, '')
     .replace(/^\s*\/\/[^\n]*/gm, '')
     .replace(/\s+/g, ' ')
     .trim();
 
-  const bookmarklet = `javascript:(function(){${minified}})()`;
+  var bookmarklet = 'javascript:(function(){' + minified + '})()';
 
-  const { spawnSync } = require('child_process');
-  const pbcopy = spawnSync('pbcopy', [], { input: bookmarklet });
-  if (pbcopy.status === 0) {
-    console.log(`\n✓ "${selected.label}" bookmarklet copied to clipboard`);
+  var spawnSync = require('child_process').spawnSync;
+  var result = spawnSync('pbcopy', [], { input: bookmarklet });
+  if (result.status === 0) {
+    console.log('\n\u2713 "' + selected.label + '" bookmarklet copied to clipboard');
   } else {
-    console.error('\n✗ Failed to copy to clipboard');
+    console.error('\n\u2717 Failed to copy to clipboard');
   }
 });

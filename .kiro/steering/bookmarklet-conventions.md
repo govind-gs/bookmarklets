@@ -23,6 +23,9 @@ inclusion: always
 - Always provide both success and error feedback
 
 ## Build System
-- `build.js` at the root handles discovery, env injection, minification, and clipboard copy
+- `build.js` at the root handles discovery, menu selection, shared file loading, minification, and clipboard copy
+- Each project can optionally have its own `build.js` that exports a transform function: `module.exports = function(source, env) { return transformedSource; }`
+- If a project `build.js` exists, the root build delegates source transformation to it; otherwise the source is used as-is
+- Project-level `build.js` receives the combined source (shared + index.js) and the parsed `.env` object
 - Don't log bookmarklet code to terminal — just copy to clipboard and confirm with a message
 - `.env` is gitignored and holds domain-specific config

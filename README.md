@@ -37,9 +37,10 @@ Extracts the ticket from the current Jira page URL. Works on `/browse/PROJ-1234`
 ## Project Structure
 
 ```
-├── build.js                          # Build script (discovery, minification, clipboard copy)
+├── build.js                          # Root build script (discovery, minification, clipboard copy)
 ├── .env                              # Environment config (gitignored)
 ├── Jira Clipboard Helper/
+│   ├── build.js                      # Project-specific build transform
 │   ├── shared/                       # Code shared across versions
 │   │   ├── copyTicketLink.js         # Clipboard write logic
 │   │   └── snackbar.js               # Toast notification UI
@@ -54,5 +55,18 @@ Extracts the ticket from the current Jira page URL. Works on `/browse/PROJ-1234`
 1. Create a new folder at the project root (e.g. `My New Bookmarklet/`)
 2. Add a version subfolder with an `index.js` (e.g. `My New Bookmarklet/v1/index.js`)
 3. Optionally add a `shared/` folder for code reused across versions
-4. Use `{{TOKEN}}` placeholders for any values that should come from `.env`
-5. Run `node build.js` — your new bookmarklet will appear in the menu
+4. Optionally add a `build.js` in the project folder for custom source transforms (e.g. env token replacement)
+5. Use `{{TOKEN}}` placeholders for any values that should come from `.env`
+6. Run `node build.js` — your new bookmarklet will appear in the menu
+
+## Project-Level Build
+
+Each project can optionally export a transform function in its own `build.js`:
+
+```javascript
+module.exports = function(source, env) {
+  return source.replace(/\{\{MY_TOKEN\}\}/g, env.MY_TOKEN);
+};
+```
+
+The root build passes the combined source (shared + index.js) and the parsed `.env` object. If no project `build.js` exists, the source is used as-is.
