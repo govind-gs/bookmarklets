@@ -55,8 +55,20 @@ rl.question('\nEnter number: ', (answer) => {
 
   const selected = bookmarklets[index];
   const inputFile = selected.file;
-  let source = fs.readFileSync(inputFile, 'utf8');
-  source = source.replace('{{JIRA_DOMAIN}}', jiraDomain);
+  const projectDir = path.dirname(path.dirname(inputFile));
+
+  // Load shared files if they exist
+  let shared = '';
+  const sharedDir = path.join(projectDir, 'shared');
+  if (fs.existsSync(sharedDir)) {
+    fs.readdirSync(sharedDir)
+      .filter(f => f.endsWith('.js'))
+      .sort()
+      .forEach(f => { shared += fs.readFileSync(path.join(sharedDir, f), 'utf8') + '\n'; });
+  }
+
+  let source = shared + fs.readFileSync(inputFile, 'utf8');
+  source = source.replace(/\{\{JIRA_DOMAIN\}\}/g, jiraDomain);
 
   const minified = source
     .replace(/\/\*[\s\S]*?\*\//g, '')
