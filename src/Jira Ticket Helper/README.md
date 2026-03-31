@@ -1,44 +1,32 @@
-# Jira Clipboard Helper
+# Jira Ticket Helper
 
-A set of bookmarklets for quickly generating and using Jira ticket links.
+A bookmarklet that bridges Jira and Appian — copy ticket info from Jira, paste it into Appian's "Create Package" form.
 
-## Versions
+Current version: v1.1.0
 
-### v1 — Clipboard Reader
+## How It Works
 
-Reads a Jira ticket ID (e.g. `PROJ-1234`) from your clipboard and copies a formatted link back. Copies both plain text (the URL) and rich text (a clickable HTML link), so pasting into Slack, Confluence, or Google Docs gives you a proper hyperlink.
+### On a Jira page
 
-Falls back to a prompt if no ticket is found in the clipboard.
+Extracts the ticket code from the URL and the ticket name from the page heading. Copies `CODE: Name` to clipboard in two formats:
 
-### v2 — Page URL Reader
+- Plain text: `PROJ-1234: Fix the login bug`
+- Rich HTML: the full text as a clickable link to the Jira ticket
 
-Extracts the ticket ID directly from the current Jira page URL. Works on:
-- `/browse/PROJ-1234` pages
-- Board and backlog views with `?selectedIssue=PROJ-1234`
+Works on `/browse/PROJ-1234` pages and board/backlog views with `?selectedIssue=PROJ-1234`.
 
-Copies the same rich link format as v1. Shows an error if you're not on a Jira page.
+### On an Appian page
 
-### v3 — Ticket Dropper (Jira → Appian)
+Reads the clipboard for a previously copied ticket (in `CODE: Name` format). Then:
 
-A two-click workflow for filling Appian's "Create Package" form with Jira ticket data.
+1. If the "Create Package" button is visible, clicks it and waits for the form to open
+2. Fills the Name field with `CODE Name`
+3. Fills the Link to Ticket field with the Jira browse URL
+4. Does not submit — lets you review first
 
-1. Click the bookmarklet on a Jira ticket page — grabs the ticket code from the URL and the ticket name from the page heading, stores both in the clipboard
-2. Open the "Create Package" form in Appian and click the bookmarklet again — reads the ticket data from the clipboard and fills in the Name field (`CODE-1234 Ticket Name`) and the Link to Ticket field (the browse URL)
+### Anywhere else
 
-## Shared Code
-
-- `shared/copyTicketLink.js` — clipboard write logic used by v1 and v2
-- `shared/snackbar.js` — toast notification UI used by all versions
-
-## Build
-
-From the project root:
-
-```bash
-node build.js
-```
-
-Select the version you want and the minified bookmarklet is copied to your clipboard.
+Shows an error snackbar: "Not on a supported page."
 
 ## Configuration
 
@@ -47,3 +35,13 @@ Set your Jira domain in the root `.env` file:
 ```
 JIRA_DOMAIN=your-company.atlassian.net
 ```
+
+## Build
+
+From the workspace root:
+
+```bash
+node build.js
+```
+
+Select "Jira Ticket Helper" and the minified bookmarklet is copied to your clipboard.

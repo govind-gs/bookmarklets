@@ -27,6 +27,11 @@ inclusion: always
 - Never use `alert()` — use the shared snackbar for all user feedback
 - Always provide both success and error feedback
 
+## Documentation
+- Always update the relevant README files when making changes to a project (features, structure, build, etc.)
+- Each project inside `src/` should have its own `README.md`
+- The root `README.md` should reflect the current project list, structure, and setup instructions
+
 ## Build System
 - `build.js` at the root discovers projects inside `src/`, loads global shared files from `shared/`, shows a project menu, and delegates to the selected project's `build.js`
 - Each project's `build.js` exports `module.exports = function(projectPath, env, globalShared) { ... }` and handles its own source loading, sub-menus (if needed), env replacement, minification, and clipboard copy

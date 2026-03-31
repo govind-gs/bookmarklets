@@ -18,55 +18,52 @@ JIRA_DOMAIN=your-company.atlassian.net
 node build.js
 ```
 
-This shows a numbered menu of all available bookmarklets. Pick one and the minified bookmarklet code is copied to your clipboard automatically.
+This shows a numbered menu of all available projects. Pick one and the project's build handles the rest — minifying and copying the bookmarklet to your clipboard.
 
-To install it in your browser, create a new bookmark and paste the clipboard contents as the URL.
+To install in your browser, create a new bookmark and paste the clipboard contents as the URL.
 
-## Current Bookmarklets
+## Current Projects
 
-### Jira Clipboard Helper
+### Jira Ticket Helper
 
-Generates a Jira ticket link and copies it to your clipboard in both plain text (the URL) and rich text (a clickable HTML link), so pasting into a rich text editor gives you a proper hyperlink.
+A single bookmarklet that works across Jira and Appian pages:
 
-**v1 — Clipboard reader**
-Reads a ticket ID (e.g. `PROJ-1234`) from your clipboard and converts it into a link. Falls back to a prompt if nothing is found.
+- On Jira: extracts the ticket code from the URL and name from the page, copies `CODE: Name` as plain text and as a clickable rich link
+- On Appian: reads the ticket from clipboard, clicks the "Create Package" button if needed, waits for the form, and fills the Name and Link to Ticket fields
 
-**v2 — Page URL reader**
-Extracts the ticket from the current Jira page URL. Works on `/browse/PROJ-1234` pages and board/backlog views with `?selectedIssue=PROJ-1234`. Shows an error if you're not on a Jira page.
+### SAIL Snippets
+
+A collection of Appian SAIL code snippets. The build shows a sub-menu of available snippets. Each copies a ready-to-paste SAIL layout to your clipboard.
+
+Available snippets:
+- `sideBySideLayout` — `a!sideBySideLayout` with two `a!sideBySideItem` entries
+- `columnsLayout` — `a!columnsLayout` with two `a!columnLayout` entries
 
 ## Project Structure
 
 ```
-├── build.js                          # Root build script (discovery, minification, clipboard copy)
+├── build.js                          # Root build (project discovery, global shared loading, delegation)
 ├── .env                              # Environment config (gitignored)
-├── Jira Clipboard Helper/
-│   ├── build.js                      # Project-specific build transform
-│   ├── shared/                       # Code shared across versions
-│   │   ├── copyTicketLink.js         # Clipboard write logic
-│   │   └── snackbar.js               # Toast notification UI
-│   ├── v1/
-│   │   └── index.js                  # Clipboard-based version
-│   └── v2/
-│       └── index.js                  # URL-based version
+├── shared/
+│   └── snackbar.js                   # Toast notification UI (shared across all projects)
+└── src/
+    ├── Jira Ticket Helper/
+    │   ├── build.js                  # Project build (env replacement, minify, clipboard)
+    │   ├── index.js                  # Bookmarklet source
+    │   └── README.md
+    └── SAIL Snippets/
+        ├── build.js                  # Project build (snippet sub-menu, minify, clipboard)
+        └── snippets/
+            ├── columnsLayout.js
+            └── sideBySideLayout.js
 ```
 
-## Adding a New Bookmarklet
+## Adding a New Project
 
-1. Create a new folder at the project root (e.g. `My New Bookmarklet/`)
-2. Add a version subfolder with an `index.js` (e.g. `My New Bookmarklet/v1/index.js`)
-3. Optionally add a `shared/` folder for code reused across versions
-4. Optionally add a `build.js` in the project folder for custom source transforms (e.g. env token replacement)
-5. Use `{{TOKEN}}` placeholders for any values that should come from `.env`
-6. Run `node build.js` — your new bookmarklet will appear in the menu
-
-## Project-Level Build
-
-Each project can optionally export a transform function in its own `build.js`:
-
-```javascript
-module.exports = function(source, env) {
-  return source.replace(/\{\{MY_TOKEN\}\}/g, env.MY_TOKEN);
-};
-```
-
-The root build passes the combined source (shared + index.js) and the parsed `.env` object. If no project `build.js` exists, the source is used as-is.
+1. Create a folder inside `src/` (e.g. `src/My Bookmarklet/`)
+2. Add a `build.js` that exports `module.exports = function(projectPath, env, globalShared) { ... }`
+3. For single-purpose bookmarklets, add an `index.js` with the source
+4. For multi-entry projects, add a subfolder with individual `.js` files and handle the sub-menu in `build.js`
+5. Use `{{TOKEN}}` placeholders for values from `.env`
+6. The `globalShared` parameter contains pre-loaded code from `shared/` — prepend it to your source
+7. Run `node build.js` — your project will appear in the menu
