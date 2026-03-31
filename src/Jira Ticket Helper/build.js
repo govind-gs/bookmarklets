@@ -22,7 +22,7 @@ module.exports = function(projectPath, env, globalShared) {
 
   var result = spawnSync('pbcopy', [], { input: bookmarklet });
   if (result.status === 0) {
-    console.log('\n\u2713 Jira Clipboard Helper copied to clipboard');
+    console.log('\n\u2713 Jira Ticket Helper copied to clipboard');
   } else {
     console.error('\n\u2717 Failed to copy to clipboard');
   }
