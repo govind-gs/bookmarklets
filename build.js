@@ -12,14 +12,25 @@ var env = fs.readFileSync(envPath, 'utf8')
     return acc;
   }, {});
 
-// Discover projects (folders with a build.js)
+// Load global shared files
+var globalShared = '';
+var globalSharedDir = path.join(__dirname, 'shared');
+if (fs.existsSync(globalSharedDir)) {
+  fs.readdirSync(globalSharedDir)
+    .filter(function(f) { return f.endsWith('.js'); })
+    .sort()
+    .forEach(function(f) { globalShared += fs.readFileSync(path.join(globalSharedDir, f), 'utf8') + '\n'; });
+}
+
+// Discover projects inside src/ (folders with a build.js)
+var srcDir = path.join(__dirname, 'src');
 var projects = [];
-fs.readdirSync(__dirname, { withFileTypes: true })
-  .filter(function(d) { return d.isDirectory() && !d.name.startsWith('.') && d.name !== 'node_modules'; })
+fs.readdirSync(srcDir, { withFileTypes: true })
+  .filter(function(d) { return d.isDirectory(); })
   .forEach(function(d) {
-    var projectBuild = path.join(__dirname, d.name, 'build.js');
+    var projectBuild = path.join(srcDir, d.name, 'build.js');
     if (fs.existsSync(projectBuild)) {
-      projects.push({ name: d.name, path: path.join(__dirname, d.name) });
+      projects.push({ name: d.name, path: path.join(srcDir, d.name) });
     }
   });
 
@@ -42,5 +53,5 @@ rl.question('\nEnter number: ', function(answer) {
 
   var selected = projects[index];
   var projectBuild = require(path.join(selected.path, 'build.js'));
-  projectBuild(selected.path, env);
+  projectBuild(selected.path, env, globalShared);
 });

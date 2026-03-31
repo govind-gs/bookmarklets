@@ -5,11 +5,11 @@ inclusion: always
 # Bookmarklet Project Conventions
 
 ## Project Structure
-- Each bookmarklet project gets its own folder at the workspace root
-- Every project must have a `build.js` that exports a function: `module.exports = function(projectPath, env) { ... }`
+- Projects live inside the `src/` folder at the workspace root
+- Every project must have a `build.js` that exports a function: `module.exports = function(projectPath, env, globalShared) { ... }`
 - Single-purpose projects have an `index.js` at the project root
 - Multi-entry projects (like SAIL Snippets) store entries in a subfolder (e.g. `snippets/`) and their `build.js` handles the sub-menu
-- Shared code goes in a `shared/` folder within the project — project `build.js` prepends these files
+- Global shared code (e.g. snackbar) lives in `shared/` at the workspace root — the root `build.js` loads and passes it to project builds
 
 ## Source Code Rules
 - Write clean, readable JavaScript — no `javascript:` prefix, no manual minification
@@ -28,7 +28,7 @@ inclusion: always
 - Always provide both success and error feedback
 
 ## Build System
-- `build.js` at the root discovers projects (folders with a `build.js`), shows a project menu, and delegates to the selected project's `build.js`
-- Each project's `build.js` exports `module.exports = function(projectPath, env) { ... }` and handles its own source loading, sub-menus (if needed), env replacement, minification, and clipboard copy
+- `build.js` at the root discovers projects inside `src/`, loads global shared files from `shared/`, shows a project menu, and delegates to the selected project's `build.js`
+- Each project's `build.js` exports `module.exports = function(projectPath, env, globalShared) { ... }` and handles its own source loading, sub-menus (if needed), env replacement, minification, and clipboard copy
 - Don't log bookmarklet code to terminal — just copy to clipboard and confirm with a message
 - `.env` is gitignored and holds domain-specific config

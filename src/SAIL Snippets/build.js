@@ -3,17 +3,7 @@ var path = require('path');
 var readline = require('readline');
 var spawnSync = require('child_process').spawnSync;
 
-module.exports = function(projectPath, env) {
-  // Load shared files
-  var shared = '';
-  var sharedDir = path.join(projectPath, 'shared');
-  if (fs.existsSync(sharedDir)) {
-    fs.readdirSync(sharedDir)
-      .filter(function(f) { return f.endsWith('.js'); })
-      .sort()
-      .forEach(function(f) { shared += fs.readFileSync(path.join(sharedDir, f), 'utf8') + '\n'; });
-  }
-
+module.exports = function(projectPath, env, globalShared) {
   // Discover snippets
   var snippetsDir = path.join(projectPath, 'snippets');
   var snippets = fs.readdirSync(snippetsDir)
@@ -41,7 +31,7 @@ module.exports = function(projectPath, env) {
     }
 
     var selected = snippets[index];
-    var source = shared + fs.readFileSync(selected.file, 'utf8');
+    var source = globalShared + fs.readFileSync(selected.file, 'utf8');
 
     // Minify
     var minified = source
