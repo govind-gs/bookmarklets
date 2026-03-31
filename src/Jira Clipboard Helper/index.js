@@ -1,3 +1,4 @@
+// v1.0.0
 var domain = '{{JIRA_DOMAIN}}';
 
 function parseTicketFromUrl(url) {
