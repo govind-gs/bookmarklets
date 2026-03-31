@@ -1,4 +1,4 @@
-// v1.0.0
+// v1.1.0
 var domain = '{{JIRA_DOMAIN}}';
 
 function parseTicketFromUrl(url) {
@@ -44,12 +44,48 @@ function isJiraPage() {
   return window.location.hostname.indexOf(domain) !== -1;
 }
 
+function isAppianPage() {
+  return findCreatePackageButton() || isAppianForm();
+}
+
+function findCreatePackageButton() {
+  var buttons = document.querySelectorAll('button');
+  for (var i = 0; i < buttons.length; i++) {
+    if (buttons[i].textContent.trim() === 'Create Package') return buttons[i];
+  }
+  return null;
+}
+
 function isAppianForm() {
   var headers = document.querySelectorAll('h1.TitleText---page_header');
   for (var i = 0; i < headers.length; i++) {
     if (headers[i].textContent.trim() === 'Create Package') return true;
   }
   return false;
+}
+
+function waitForFocus(timeout) {
+  return new Promise(function(resolve, reject) {
+    if (document.hasFocus()) { resolve(); return; }
+    var elapsed = 0;
+    var interval = setInterval(function() {
+      elapsed += 50;
+      if (document.hasFocus()) { clearInterval(interval); resolve(); }
+      else if (elapsed >= timeout) { clearInterval(interval); reject(new Error('Page did not regain focus')); }
+    }, 50);
+  });
+}
+
+function waitForForm(timeout) {
+  return new Promise(function(resolve, reject) {
+    if (isAppianForm()) { resolve(); return; }
+    var elapsed = 0;
+    var interval = setInterval(function() {
+      elapsed += 200;
+      if (isAppianForm()) { clearInterval(interval); resolve(); }
+      else if (elapsed >= timeout) { clearInterval(interval); reject(new Error('Form did not appear')); }
+    }, 200);
+  });
 }
 
 async function handleJiraPage() {
@@ -66,6 +102,7 @@ async function handleJiraPage() {
   }
 
   try {
+    await waitForFocus(3000);
     var url = 'https://' + domain + '/browse/' + code;
     var text = code + ': ' + name;
     var html = '<a href="' + url + '">' + code + ': ' + name + '</a>';
@@ -81,9 +118,10 @@ async function handleJiraPage() {
   }
 }
 
-async function handleAppianForm() {
+async function handleAppianPage() {
   var ticket;
   try {
+    await waitForFocus(3000);
     var text = await navigator.clipboard.readText();
     ticket = parseTicketFromPlainText(text);
   } catch (e) {
@@ -94,6 +132,20 @@ async function handleAppianForm() {
   if (!ticket) {
     showSnackbar('No ticket in clipboard. Copy a Jira ticket first.', true);
     return;
+  }
+
+  // Click the Create Package button if the form isn't open yet
+  if (!isAppianForm()) {
+    var btn = findCreatePackageButton();
+    if (btn) {
+      btn.click();
+      try {
+        await waitForForm(5000);
+      } catch (e) {
+        showSnackbar('Create Package form did not open.', true);
+        return;
+      }
+    }
   }
 
   var nameInput = findInputByLabel('Name');
@@ -116,8 +168,8 @@ async function handleAppianForm() {
 async function jiraClipboardHelper() {
   if (isJiraPage()) {
     await handleJiraPage();
-  } else if (isAppianForm()) {
-    await handleAppianForm();
+  } else if (isAppianPage()) {
+    await handleAppianPage();
   } else {
     showSnackbar('Not on a supported page (Jira or Appian Create Package form).', true);
   }
